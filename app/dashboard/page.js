@@ -96,6 +96,7 @@ export default function DashboardPage() {
             <button type="button" className={`rounded px-3 py-2 ${linkMode === 'normal' ? 'bg-blue-600' : 'bg-slate-800'}`} onClick={() => setLinkMode('normal')}>Normal</button>
             <button type="button" className={`rounded px-3 py-2 ${linkMode === 'key' ? 'bg-indigo-600' : 'bg-slate-800'}`} onClick={() => setLinkMode('key')}>Key Modu</button>
           </div>
+          {linkMode === 'key' && <textarea className="w-full rounded bg-slate-950 p-2" placeholder="Gizli metin" value={secretText} onChange={(e) => setSecretText(e.target.value)} />}
 
           {linkMode === 'key' && (
             <textarea className="w-full rounded border border-slate-700 bg-slate-950 p-2" placeholder="Gizli metin" value={secretText} onChange={(e) => setSecretText(e.target.value)} />
