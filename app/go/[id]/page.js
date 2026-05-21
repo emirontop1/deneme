@@ -2,148 +2,129 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 
-export default function SurveyGate() {
+export default function UniversalGate() {
   const { id } = useParams()
   const [linkData, setLinkData] = useState(null)
-  const [selectedOption, setSelectedOption] = useState(null)
-  const [surveyCompleted, setSurveyCompleted] = useState(false)
+  const [currentTaskIndex, setCurrentTaskIndex] = useState(0)
+  const [adTimer, setAdTimer] = useState(0)
+  const [adCounting, setAdCounting] = useState(false)
   const [keyCopied, setKeyCopied] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const savedLinks = localStorage.getItem('survey_links')
-    if (savedLinks) {
-      const links = JSON.parse(savedLinks)
-      const found = links.find(l => l.id === id)
-      if (found) setLinkData(found)
-    }
-    setLoading(false)
+    fetchLinkDetails()
   }, [id])
 
-  const handleVote = (idx) => {
-    if (surveyCompleted) return
-    setSelectedOption(idx)
-    setSurveyCompleted(true)
+  const fetchLinkDetails = async () => {
+    try {
+      const res = await fetch(`/app/../api/links/${id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setLinkData(data)
+      }
+    } catch (e) { console.error(e) }
+    setLoading(false)
+  }
 
-    // İstatistik artırma simülasyonu
-    const savedLinks = localStorage.getItem('survey_links')
-    if (savedLinks) {
-      const links = JSON.parse(savedLinks)
-      const updated = links.map(l => l.id === id ? { ...l, clicks: l.clicks + 1 } : l)
-      localStorage.setItem('survey_links', JSON.stringify(updated))
+  // Reklam Sayacını Yöneten Mekanizma
+  useEffect(() => {
+    let interval;
+    if (adCounting && adTimer > 0) {
+      interval = setInterval(() => setAdTimer(t => t - 1), 1000)
+    } else if (adCounting && adTimer === 0) {
+      setAdCounting(false)
+      handleTaskComplete()
+    }
+    return () => clearInterval(interval)
+  }, [adCounting, adTimer])
+
+  const startAdTimer = (duration) => {
+    setAdTimer(duration)
+    setAdCounting(true)
+  }
+
+  const handleTaskComplete = async () => {
+    const nextIndex = currentTaskIndex + 1
+    if (linkData.tasks && nextIndex >= linkData.tasks.length) {
+      // Tüm görevler bittiğinde veritabanında tıklamayı global artır
+      await fetch(`/app/../api/links/${id}`, { method: 'POST' })
+      setCurrentTaskIndex(nextIndex) // Kilit açılma aşamasına geçir
+    } else {
+      setCurrentTaskIndex(nextIndex)
     }
   }
 
-  const handleCopyKey = () => {
-    if (!linkData?.generatedKey) return
-    navigator.clipboard.writeText(linkData.generatedKey)
-    setKeyCopied(true)
-  }
+  if (loading) return <div className="flex min-h-screen items-center justify-center text-slate-400 bg-slate-950 font-mono">Veritabanı Bağlantısı Kuruluyor...</div>
+  if (!linkData) return <div className="flex min-h-screen items-center justify-center text-rose-500 bg-slate-950 font-bold">404 - Kilitli Havuz Bulunamadı</div>
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center text-slate-400 bg-slate-950">Sistem Hazırlanıyor...</div>
-
-  if (!linkData) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center bg-slate-950">
-        <h1 className="text-2xl font-bold text-rose-500 mb-2">404 - Geçersiz Kilit</h1>
-        <p className="text-slate-500">Aradığınız link havuzdan silinmiş veya süresi dolmuş.</p>
-      </div>
-    )
-  }
+  const activeTask = linkData.tasks ? linkData.tasks[currentTaskIndex] : null
+  const allTasksFinished = linkData.tasks ? currentTaskIndex >= linkData.tasks.length : false
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-slate-950">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-2xl relative overflow-hidden">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-slate-950 text-slate-200">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-6">
         
-        {/* Üst Logo/Bilgilendirme */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-            {linkData.linkMode === 'key' ? '🔑 Key Koruma Sistemi' : '🛡️ Güvenli Geçiş Havuzu'}
+        {/* Üst Kısım İlerleme Çubuğu */}
+        <div className="text-center space-y-2">
+          <div className="text-[10px] font-bold tracking-widest text-blue-400 uppercase bg-blue-500/10 px-3 py-1 rounded-full w-fit mx-auto border border-blue-500/20">
+            {allTasksFinished ? "🔓 Kilit Açıldı" : `🔒 Görevleri Tamamla (${currentTaskIndex + 1}/${linkData.tasks?.length})`}
           </div>
-          <h2 className="text-md font-semibold text-slate-300 mt-4">
-            İçeriğe erişmek için doğrulamayı tamamlayın
-          </h2>
+          <p className="text-xs text-slate-400">İçeriğe güvenli bir şekilde yönlendirilmek üzere doğrulamaları geçin.</p>
         </div>
 
-        {/* ANKET ALANI */}
-        <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 mb-6">
-          <h3 className="text-sm font-medium text-slate-200 mb-3 text-center bg-slate-900 py-2 rounded-lg border border-slate-800">
-            {linkData.surveyQuestion}
-          </h3>
-          <div className="space-y-2">
-            {linkData.options.map((opt, idx) => (
-              <button
-                key={idx}
-                disabled={surveyCompleted}
-                onClick={() => handleVote(idx)}
-                className={`w-full text-left p-3 rounded-lg border text-xs font-medium transition-all flex justify-between items-center ${
-                  selectedOption === idx
-                    ? 'bg-blue-600/20 border-blue-500 text-blue-400'
-                    : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-400 disabled:opacity-50'
-                }`}
-              >
-                <span>{opt}</span>
-                {selectedOption === idx && <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded font-bold">ONAYLANDI</span>}
-              </button>
-            ))}
+        {/* AKTİF GÖREV EKRANI */}
+        {!allTasksFinished && activeTask && (
+          <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 shadow-inner">
+            {activeTask.type === 'survey' ? (
+              <div className="space-y-4">
+                <h3 className="text-center text-sm font-semibold text-slate-200">{activeTask.question}</h3>
+                <div className="space-y-2">
+                  {activeTask.options?.map((opt, idx) => (
+                    <button key={idx} onClick={handleTaskComplete} className="w-full text-left p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-medium hover:border-blue-500 transition-colors">
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center space-y-4 py-4">
+                <h3 className="text-sm font-semibold text-slate-200">Sponsorlu Reklam Adımı</h3>
+                {adCounting ? (
+                  <div className="text-4xl font-black text-amber-400 font-mono">{adTimer}<span className="text-xs text-slate-500 ml-1">sn</span></div>
+                ) : (
+                  <button onClick={() => startAdTimer(activeTask.duration)} className="bg-amber-600 hover:bg-amber-500 text-slate-950 text-xs font-bold px-6 py-3 rounded-xl shadow-lg transition-colors">
+                    ▶ Reklamı Başlat ve Bekle
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* KİLİT AÇILMA SONRASI EKRAN MANTIĞI */}
-        {surveyCompleted ? (
+        {/* TÜM ADIMLAR BİTTİĞİNDE SİSTEM SONU */}
+        {allTasksFinished && (
           <div className="space-y-4 animate-fadeIn">
             {linkData.linkMode === 'key' ? (
-              // KEY MODU SEÇİLDİYSE GÖSTERİLECEK EKRAN
-              <div className="space-y-3 bg-indigo-950/30 p-4 rounded-xl border border-indigo-900/50">
-                <div className="text-center text-xs font-semibold text-indigo-400">Anahtarınız Üretildi:</div>
+              <div className="bg-indigo-950/20 border border-indigo-900/40 p-4 rounded-2xl space-y-3">
+                <div className="text-center text-xs font-bold text-indigo-400">Sistem Anahtarı Doğrulandı:</div>
                 <div className="flex gap-2">
-                  <div className="bg-slate-950 border border-indigo-900 px-3 py-2 rounded-lg font-mono text-sm text-center font-bold text-indigo-300 flex-1 tracking-wider">
-                    {linkData.generatedKey}
-                  </div>
-                  <button 
-                    onClick={handleCopyKey}
-                    className={`px-4 text-xs font-bold rounded-lg transition-all ${keyCopied ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'}`}
-                  >
-                    {keyCopied ? 'Kopyalandı!' : 'Kopyala'}
-                  </button>
+                  <div className="bg-slate-950 border border-slate-800 p-2 text-center rounded-xl font-mono text-sm font-bold flex-1 select-all text-indigo-300">{linkData.generatedKey}</div>
+                  <button onClick={() => { navigator.clipboard.writeText(linkData.generatedKey); setKeyCopied(true) }} className="bg-indigo-600 text-white px-3 rounded-xl text-xs font-bold">Kopyala</button>
                 </div>
-
                 {keyCopied && (
-                  <div className="mt-4 p-3 bg-slate-950 border border-emerald-900/50 rounded-lg text-xs text-emerald-400 animate-slideUp">
-                    <span className="block font-bold text-white mb-1">🔓 Gizli Mesaj Açıldı:</span>
-                    <p className="break-all font-mono bg-slate-900 p-2 rounded border border-slate-800 text-slate-300">{linkData.secretText}</p>
-                    <a 
-                      href={linkData.targetUrl} target="_blank" rel="noopener noreferrer"
-                      className="block text-center mt-3 text-blue-400 underline hover:text-blue-300"
-                    >
-                      Ana Kaynağa Git (İsteğe Bağlı)
-                    </a>
+                  <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs text-slate-300 mt-2">
+                    <span className="block text-emerald-400 font-bold mb-1">🎁 Gizli Ödül Verisi:</span>
+                    <p className="font-mono bg-slate-900 p-2 rounded border border-slate-800 break-all">{linkData.secretText}</p>
                   </div>
                 )}
               </div>
             ) : (
-              // NORMAL MOD SEÇİLDİYSE DIREKT HEDEFE YÖNLENDİRME BUTONU
-              <a
-                href={linkData.targetUrl}
-                className="block w-full text-center bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all"
-              >
-                Sisteme Giriş Yap (Hedefe Git)
+              <a href={linkData.targetUrl} className="block w-full text-center bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-bold py-3.5 rounded-2xl shadow-xl transition-all">
+                Hedefe Güvenli Git 🚀
               </a>
             )}
           </div>
-        ) : (
-          // ANKET ÇÖZÜLMEDİYSE BUTON KİLİTLİDİR
-          <button
-            disabled
-            className="w-full text-center bg-slate-800 text-slate-500 font-bold py-3 rounded-xl cursor-not-allowed text-sm"
-          >
-            🔒 Devam Etmek İçin Anketi Tamamlayın
-          </button>
         )}
-
-        <div className="text-center mt-4 text-[9px] text-slate-600 tracking-wider">
-          SECURE BY LINKSURVEY ARCHITECTURE
-        </div>
       </div>
     </div>
   )
