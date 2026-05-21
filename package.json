@@ -1,11 +1,12 @@
 {
-  "name": "linkvertise-survey-clone",
-  "version": "2.0.0",
+  "name": "link-gateway-lootlabs-clone",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
     "@vercel/kv": "^1.0.1",
