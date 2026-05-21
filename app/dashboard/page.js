@@ -6,7 +6,7 @@ export default function Dashboard() {
   const [surveyQuestion, setSurveyQuestion] = useState('')
   const [options, setOptions] = useState(['', ''])
   const [linkMode, setLinkMode] = useState('normal') // 'normal' veya 'key'
-  const [secretText, setSecretText] = useState('') // Key modunda gösterilecek gizli yazı
+  const [secretText, setSecretText] = useState('') 
   const [links, setLinks] = useState([])
   const [baseUrl, setBaseUrl] = useState('')
 
@@ -24,7 +24,6 @@ export default function Dashboard() {
     setOptions(newOptions)
   }
 
-  // Rastgele Key Üretici (Örn: KEY-ABCD-1234)
   const generateRandomKey = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
     const part1 = Array.from({length: 4}, () => chars[Math.floor(Math.random() * chars.length)]).join('')
@@ -58,7 +57,6 @@ export default function Dashboard() {
     setLinks(updatedLinks)
     localStorage.setItem('survey_links', JSON.stringify(updatedLinks))
 
-    // Formu sıfırla
     setTargetUrl('')
     setSurveyQuestion('')
     setOptions(['', ''])
@@ -76,12 +74,11 @@ export default function Dashboard() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* GELİŞMİŞ FORM */}
+        {/* FORM */}
         <div className="lg:col-span-1 bg-slate-800/40 border border-slate-800 p-6 rounded-2xl h-fit shadow-xl">
           <h2 className="text-xl font-semibold mb-4 text-white">Gelişmiş Link Oluştur</h2>
           <form onSubmit={handleCreateLink} className="space-y-4">
             
-            {/* MOD SEÇİMİ */}
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-400 mb-2">Link Çalışma Modu</label>
               <div className="grid grid-cols-2 gap-2 bg-slate-900 p-1 rounded-xl border border-slate-700">
@@ -90,18 +87,107 @@ export default function Dashboard() {
                   onClick={() => setLinkMode('normal')}
                   className={`py-2 text-xs font-medium rounded-lg transition-all ${linkMode === 'normal' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
                 >
-                  Normal (Direkt Yönlendirme)
+                  Normal (Direkt)
                 </button>
                 <button
                   type="button"
                   onClick={() => setLinkMode('key')}
                   className={`py-2 text-xs font-medium rounded-lg transition-all ${linkMode === 'key' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
                 >
-                  Key Sistemi (LootLabs)
+                  Key Sistemi
                 </button>
               </div>
             </div>
 
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Hedef Link</label>
+              <input 
+                type="url" required placeholder="https://example.com/file"
+                value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            {linkMode === 'key' && (
+              <div>
+                <label className="block text-xs font-semibold uppercase text-indigo-400 mb-1">Gizli Yazı / Script / Şifre</label>
+                <textarea 
+                  required placeholder="Ziyaretçi key alınca göreceği gizli yazı..."
+                  value={secretText} onChange={(e) => setSecretText(e.target.value)}
+                  rows="2"
+                  className="w-full bg-slate-900 border border-indigo-900/60 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Anket Sorusu</label>
+              <input 
+                type="text" required placeholder="Devam etmek için birini seçin"
+                value={surveyQuestion} onChange={(e) => setSurveyQuestion(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-2">Anket Şıkları</label>
+              {options.map((opt, idx) => (
+                <input 
+                  key={idx} type="text" required placeholder={`Şık #${idx + 1}`}
+                  value={opt} onChange={(e) => handleOptionChange(idx, e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white mb-2 focus:outline-none focus:border-blue-500"
+                />
+              ))}
+              <button 
+                type="button" onClick={handleAddOption}
+                className="text-xs text-blue-400 hover:underline mt-1 block"
+              >
+                + Yeni Şık Ekle
+              </button>
+            </div>
+
+            <button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium py-2.5 rounded-lg transition-colors shadow-lg">
+              Kilitli Link Oluştur
+            </button>
+          </form>
+        </div>
+
+        {/* LİSTELEME EKRANI */}
+        <div className="lg:col-span-2 space-y-4">
+          <h2 className="text-xl font-semibold text-white mb-4">Oluşturulan Link Havuzunuz</h2>
+          {links.length === 0 ? (
+            <p className="text-slate-500 bg-slate-800/10 p-12 rounded-2xl text-center border border-dashed border-slate-800">Henüz aktif bir kilitli linkiniz bulunmuyor.</p>
+          ) : (
+            links.map((link) => (
+              <div key={link.id} className="bg-slate-800/20 border border-slate-800/80 p-5 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-2 flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${link.linkMode === 'key' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}`}>
+                      {link.linkMode === 'key' ? '🔑 Key Modu' : '🔗 Normal'}
+                    </span>
+                    <div className="text-sm font-semibold text-emerald-400 truncate select-all">
+                      {baseUrl}/go/{link.id}
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-400 truncate">Hedef: {link.targetUrl}</p>
+                  {link.linkMode === 'key' && (
+                    <p className="text-xs text-indigo-300 truncate bg-indigo-950/40 px-2 py-1 rounded border border-indigo-900/30">Gizli İçerik: {link.secretText}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-4 bg-slate-900/60 p-3 rounded-xl border border-slate-800 self-end md:self-auto">
+                  <div className="text-center">
+                    <span className="block text-xl font-bold text-white font-mono">{link.clicks}</span>
+                    <span className="text-[9px] uppercase tracking-wider text-slate-500 font-bold">Tıklama</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Hedef Link</label>
               <input 
