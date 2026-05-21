@@ -1,18 +1,15 @@
 export const metadata = {
-  title: 'LinkSurvey - Dashboard',
-  description: 'Linklerinizi anket duvarıyla paraya veya etkileşime dönüştürün',
-}
+  title: 'Link Gateway Dashboard',
+  description: 'LootLabs benzeri çok görevli link geçiş sistemi',
+};
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="tr">
+    <html lang="tr" className="dark">
       <head>
         <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
       </head>
-      <body className="bg-slate-900 text-slate-100 font-sans antialiased">
-        {children}
-      </body>
+      <body className="min-h-screen bg-slate-950 text-slate-100 antialiased">{children}</body>
     </html>
-  )
+  );
 }
-
